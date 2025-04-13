@@ -23,7 +23,7 @@ make os
 
 make clean
 
-run: ./os <name of file in input folder> (ex: ./os os_1_mlq_paging_small_4K)
+run: ./os <name> (ex: ./os os_1_mlq_paging_small_4K)
 
 depend on what you make
 
