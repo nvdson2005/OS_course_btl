@@ -66,8 +66,7 @@ struct vm_rg_struct *get_symrg_byid(struct mm_struct *mm, int rgid)
  *@alloc_addr: address of allocated memory region
  *
  */
-int __alloc(struct pcb_t *caller, int vmaid, int rgid, int size, int *alloc_addr)
-{
+int __alloc(struct pcb_t *caller, int vmaid, int rgid, int size, int *alloc_addr){
   /*Allocate at the toproof */
   struct vm_rg_struct rgnode;
 // TODO: commit the vmaid (NOTE: oldddddddd module, ignore it)
@@ -215,8 +214,8 @@ int tgtfpn = PAGING_PTE_SWP(pte); // The target frame storing our variable
 // TODO playing with paging theory
 /* Find victim page */
 find_victim_page(caller->mm, &vicpgn);
-    
-    /* Get victim's page table entry */
+
+/* Get victim's page table entry */
 vicpte = mm->pgd[vicpgn];
 vicfpn = PAGING_FPN(vicpte);
 
@@ -302,7 +301,6 @@ int pg_setval(struct mm_struct *mm, int addr, BYTE value, struct pcb_t *caller){
 int pgn = PAGING_PGN(addr);
 int off = PAGING_OFFST(addr);
 int fpn;
-
 /* Get the page to MEMRAM, swap from MEMSWAP if needed */
 if (pg_getpage(mm, pgn, &fpn, caller) != 0) return -1; /* invalid page access */
 
@@ -480,10 +478,11 @@ return 0;
  */
 int get_free_vmrg_area(struct pcb_t *caller, int vmaid, int size, struct vm_rg_struct *newrg){
 if(caller == NULL || newrg == NULL) return -1;
-
+// debug
+// printf("The value of vmaid is: %d\n", vmaid);
 struct vm_area_struct *cur_vma = get_vma_by_num(caller->mm, vmaid);
+if (cur_vma == NULL) return -1;
 struct vm_rg_struct *rgit = cur_vma->vm_freerg_list;
-
 if (rgit == NULL) return -1;
 
 /* Probe unintialized newrg */
@@ -492,8 +491,8 @@ newrg->rg_end = -1;
 newrg->rg_start = -1;
 
 /* TODO Traverse on list of free vm region to find a fit space */
-
 for(;rgit != NULL;){
+
 // found fit region
 if(rgit->rg_end - rgit->rg_start >= size){
 newrg->rg_start = rgit->rg_start;

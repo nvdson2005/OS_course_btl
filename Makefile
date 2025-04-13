@@ -6,7 +6,7 @@ SRC = src
 OBJ = obj
 INCLUDE = include
 
-CC = gcc
+CC = gcc -fsanitize=address -fsanitize=undefined
 DEBUG = -g
 CFLAGS = -Wall -c $(DEBUG)
 LFLAGS = -Wall $(DEBUG)

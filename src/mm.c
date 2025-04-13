@@ -278,24 +278,24 @@ int init_mm(struct mm_struct *mm, struct pcb_t *caller)
   struct vm_area_struct *vma0 = malloc(sizeof(struct vm_area_struct));
 
   mm->pgd = malloc(PAGING_MAX_PGN * sizeof(uint32_t));
+  // Initialize as not present, not swapped
+  for (int i = 0; i < PAGING_MAX_PGN; i++) mm->pgd[i] = 0; // Clear all bits
 
   /* By default the owner comes with at least one vma */
   vma0->vm_id = 0;
   vma0->vm_start = 0;
   vma0->vm_end = vma0->vm_start;
   vma0->sbrk = vma0->vm_start;
+  vma0->vm_freerg_list = NULL;
   struct vm_rg_struct *first_rg = init_vm_rg(vma0->vm_start, vma0->vm_end);
   enlist_vm_rg_node(&vma0->vm_freerg_list, first_rg);
 
   /* TODO update VMA0 next */
   vma0->vm_next = NULL;
-
   /* Point vma owner backward */
   vma0->vm_mm = mm; 
-
   /* TODO: update mmap */
   mm->mmap = vma0;
-
   return 0;
 }
 
