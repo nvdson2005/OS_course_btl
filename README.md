@@ -10,6 +10,7 @@ sudo apt update
 sudo apt install cmake
 
 then: make os (or any below)
+
 make all
 
 make syscalltbl.lst	(do this first)
