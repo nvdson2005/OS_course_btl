@@ -131,15 +131,11 @@ regs.a3 = inc_sz;
  *@size: allocated size
  *
  */
-int __free(struct pcb_t *caller, int vmaid, int rgid)
-{
-  struct vm_rg_struct *rgnode;
-
-  if(rgid < 0 || rgid > PAGING_MAX_SYMTBL_SZ)
-    return -1;
+int __free(struct pcb_t *caller, int vmaid, int rgid){
+  if(rgid < 0 || rgid > PAGING_MAX_SYMTBL_SZ) return -1;
 
   /* TODO Manage the collect freed region to freerg_list */
-  rgnode = malloc(sizeof(struct vm_rg_struct));
+  struct vm_rg_struct *rgnode = malloc(sizeof(struct vm_rg_struct));
   if (rgnode == NULL) return -1;
   
   /* Copy information from symbol region table */
@@ -212,8 +208,7 @@ uint32_t vicpte;
 int tgtfpn = PAGING_PTE_SWP(pte); // The target frame storing our variable
 
 // TODO playing with paging theory
-/* Find victim page */
-find_victim_page(caller->mm, &vicpgn);
+find_victim_page(mm, &vicpgn);
 
 /* Get victim's page table entry */
 vicpte = mm->pgd[vicpgn];
@@ -227,27 +222,24 @@ struct sc_regs regs;
 regs.a1 = SYSMEM_SWP_OP;
 regs.a2 = vicfpn;
 regs.a3 = swpfpn;
-
-/* SYSCALL 17 sys_memmap to swap */
 syscall(caller, 17, &regs);
 
-/* Update page table entry for victim - set as swapped */
-pte_set_swap(&mm->pgd[vicpgn], caller->active_mswp_id, swpfpn);
 
 /* TODO Copy target frame from swap to mem: SWP(tgtfpn <--> vicfpn) */
 regs.a1 = SYSMEM_SWP_OP;
-regs.a2 = tgtfpn;
-regs.a3 = vicfpn;
-
-/* SYSCALL 17 sys_memmap */
+regs.a2 = vicfpn;
+regs.a3 = tgtfpn;
 syscall(caller, 17, &regs);
+
+/* Update page table entry for victim - set as swapped */
+pte_set_swap(&mm->pgd[vicpgn], 0, swpfpn);
 
 /* Update page table entry for target page - mark as present */
 pte_set_fpn(&mm->pgd[pgn], vicfpn);
 PAGING_PTE_SET_PRESENT(mm->pgd[pgn]);
 
 /* Add to FIFO page queue for future replacement */
-enlist_pgn_node(&caller->mm->fifo_pgn, pgn);
+enlist_pgn_node(&mm->fifo_pgn, pgn);
 }
 
 *fpn = PAGING_FPN(mm->pgd[pgn]);
@@ -280,10 +272,9 @@ int phyaddr = (fpn << (PAGING_ADDR_OFFST_HIBIT + 1)) | off;
 struct sc_regs regs;
 regs.a1 = SYSMEM_IO_READ;
 regs.a2 = phyaddr;
-
 syscall(caller, 17, &regs);
-/* Data is updated via pointer */
-*data = (BYTE)regs.a3;
+
+*data = (BYTE)regs.a3; // Data is updated via pointer
 return 0;
 }
 

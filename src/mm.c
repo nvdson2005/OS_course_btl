@@ -109,18 +109,19 @@ ret_rg->rg_end = addr + pgnum * PAGING_PAGESZ;
 struct framephy_struct *fpit = frames;
 for (pgit = 0; pgit < pgnum; pgit++){
 if (fpit == NULL) break;
-  
-// Get the page table entry address
-uint32_t *pte = &caller->mm->pgd[pgn + pgit];
-  
-// Map the frame to page table entry
+
+int current_pgn = pgn + pgit;
+
+//caller->mm->pgd[current_pgn]= fpit->fpn;
+
+uint32_t *pte = &caller->mm->pgd[current_pgn];
 pte_set_fpn(pte, fpit->fpn);
-  
-// Move to next frame
+
+
 fpit = fpit->fp_next;
-  
+
 // Tracking for later page replacement activities (if needed) Enqueue new usage page
-enlist_pgn_node(&caller->mm->fifo_pgn, pgn + pgit);
+enlist_pgn_node(&caller->mm->fifo_pgn, current_pgn);
 }
 
 
@@ -141,7 +142,23 @@ int pgit;
 int fpn;
 struct framephy_struct *newfp_str = NULL;
 
-// TODO: allocate the page
+// TODO: allocate the page 
+//caller-> ...
+//frm_lst-> ...
+
+/*
+for (pgit = 0; pgit < req_pgnum; pgit++){
+//TODO: allocate the page 
+
+if (MEMPHY_get_freefp(caller->mram, &fpn) == 0){
+newfp_str->fpn = fpn;
+}
+else{
+// TODO: ERROR CODE of obtaining somes but not enough frames
+}
+}
+*/
+
 *frm_lst = NULL;
 struct framephy_struct *tail = NULL;
 
@@ -181,24 +198,6 @@ return -3000; // OOM
 return 0;
 }
 
-
-// TODO: allocate the page 
-//caller-> ...
-//frm_lst-> ...
-
-/*
-for (pgit = 0; pgit < req_pgnum; pgit++){
-//TODO: allocate the page 
-
-if (MEMPHY_get_freefp(caller->mram, &fpn) == 0){
-newfp_str->fpn = fpn;
-}
-else{
-// TODO: ERROR CODE of obtaining somes but not enough frames
-}
-}
-
-*/
 
 
 
@@ -279,7 +278,8 @@ int init_mm(struct mm_struct *mm, struct pcb_t *caller)
 
   mm->pgd = malloc(PAGING_MAX_PGN * sizeof(uint32_t));
   // Initialize as not present, not swapped
-  for (int i = 0; i < PAGING_MAX_PGN; i++) mm->pgd[i] = 0; // Clear all bits
+  for (int i = 0; i < PAGING_MAX_PGN; i++) mm->pgd[i] = 0x00000000; // Clear all bits
+  mm->fifo_pgn = NULL;
 
   /* By default the owner comes with at least one vma */
   vma0->vm_id = 0;
