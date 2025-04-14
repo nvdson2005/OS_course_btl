@@ -11,13 +11,13 @@ sudo apt install cmake
 
 then: make os (or any below)
 
-make all
+make all (do not)
 
-make syscalltbl.lst	(do this first)
+make syscalltbl.lst	(included in make os)
 
-make mem (this will fail, old module)
+make mem (fail, old module)
 
-make sched
+make sched (fail)
 
 make os
 
