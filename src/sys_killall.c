@@ -12,6 +12,9 @@
 #include "syscall.h"
 #include "stdio.h"
 #include "libmem.h"
+#include "string.h"
+
+extern struct pcb_t* _proc_list[MAX_PROC]; // danh sách các process đang tồn tại
 
 int __sys_killall(struct pcb_t *caller, struct sc_regs* regs)
 {
@@ -23,14 +26,14 @@ int __sys_killall(struct pcb_t *caller, struct sc_regs* regs)
     
     /* TODO: Get name of the target proc */
     //proc_name = libread..
+    // Đọc chuỗi từ memory
     int i = 0;
-    data = 0;
-    while(data != -1){
-        libread(caller, memrg, i, &data);
-        proc_name[i]= data;
-        if(data == -1) proc_name[i]='\0';
+    while (i < sizeof(proc_name) - 1) {
+        if (libread(caller, memrg, i, &data) != 0 || (char)data == '\0') break;
+        proc_name[i] = (char)data;
         i++;
     }
+    proc_name[i] = '\0';
     printf("The procname retrieved from memregionid %d is \"%s\"\n", memrg, proc_name);
 
     /* TODO: Traverse proclist to terminate the proc
@@ -44,5 +47,21 @@ int __sys_killall(struct pcb_t *caller, struct sc_regs* regs)
      *        name in var proc_name
      */
 
-    return 0; 
+    // Duyệt qua danh sách process để "kill"
+    int killed = 0;
+    for (int i = 0; i < MAX_PROC; ++i) {
+        if (_proc_list[i] != NULL && strcmp(_proc_list[i]->path, proc_name) == 0) {
+            printf("Killing process PID %d with name \"%s\"\n", _proc_list[i]->pid, _proc_list[i]->path);
+            _proc_list[i]->pc = -1;  // Đặt program counter để tiến trình kết thúc ở vòng lặp tiếp theo
+            killed++;
+        }
+    }
+
+    if (killed == 0) {
+        printf("No process matched the name \"%s\"\n", proc_name);
+    } else {
+        printf("Total %d processes killed.\n", killed);
+    }
+
+    return 0;
 }
