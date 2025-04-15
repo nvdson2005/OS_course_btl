@@ -7,7 +7,7 @@ if window system: in your WSL:
 
 sudo apt update
 
-sudo apt install cmake
+sudo apt install make
 
 then: make os (or any below)
 
