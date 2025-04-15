@@ -27,4 +27,10 @@ run: ./os name_in_input_folder (ex: ./os os_1_mlq_paging_small_4K)
 
 depend on what you make
 
+#################################
+
+example of full run: make clean -> make os -> ./os os_1_mlq_paging_small_4K
+
+#################################
+
 Linux: same
