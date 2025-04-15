@@ -14,7 +14,7 @@
 #include "libmem.h"
 #include "string.h"
 
-/* extern */ struct pcb_t* _proc_list[MAX_PROC]; // danh sách các process đang tồn tại
+struct pcb_t* _proc_list[MAX_PROC]; // danh sách các process đang tồn tại
 
 int __sys_killall(struct pcb_t *caller, struct sc_regs* regs)
 {
