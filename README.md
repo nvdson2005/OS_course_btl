@@ -2,12 +2,15 @@
 School project ( do not look in :> )
 
 # RUN
+#################################
 
-if window system: in your WSL:
+if window system: install makefile in your WSL:
 
 sudo apt update
 
 sudo apt install make
+
+#################################
 
 then: make os (or any below)
 
