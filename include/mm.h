@@ -67,6 +67,7 @@
 #define PAGING_SWP_LOBIT NBITS(PAGING_PAGESZ)
 #define PAGING_SWP_HIBIT (NBITS(PAGING_MEMSWPSZ) - 1)
 #define PAGING_SWP(pte) ((pte&PAGING_PTE_SWPOFF_MASK) >> PAGING_SWPFPN_OFFSET)
+#define PAGING_PAGE_SWAPPED(pte) ((pte) & PAGING_PTE_SWAPPED_MASK)
 
 /* Value operators */
 #define SETBIT(v,mask) (v=v|mask)

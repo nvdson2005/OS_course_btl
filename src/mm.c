@@ -67,12 +67,11 @@ int pte_set_swap(uint32_t *pte, int swptyp, int swpoff){
  * @fpn   : frame page number (FPN)
  */
 int pte_set_fpn(uint32_t *pte, int fpn){
-  SETBIT(*pte, PAGING_PTE_PRESENT_MASK);
-  CLRBIT(*pte, PAGING_PTE_SWAPPED_MASK);
+SETBIT(*pte, PAGING_PTE_PRESENT_MASK);
+CLRBIT(*pte, PAGING_PTE_SWAPPED_MASK);
 
-  SETVAL(*pte, fpn, PAGING_PTE_FPN_MASK, PAGING_PTE_FPN_LOBIT);
-
-  return 0;
+SETVAL(*pte, fpn, PAGING_PTE_FPN_MASK, PAGING_PTE_FPN_LOBIT);
+return 0;
 }
 
 
@@ -111,11 +110,8 @@ if (fpit == NULL) break;
 
 int current_pgn = pgn + pgit;
 
-//caller->mm->pgd[current_pgn]= fpit->fpn;
-
 uint32_t *pte = &caller->mm->pgd[current_pgn];
 pte_set_fpn(pte, fpit->fpn);
-
 
 fpit = fpit->fp_next;
 
@@ -192,6 +188,16 @@ return -3000; // OOM
 }
 
 }
+
+// Reverse the frame list
+struct framephy_struct *prev = NULL, *curr = *frm_lst, *next = NULL;
+while (curr) {
+    next = curr->fp_next;
+    curr->fp_next = prev;
+    prev = curr;
+    curr = next;
+}
+*frm_lst = prev;
 
 return 0;
 }
@@ -272,6 +278,9 @@ int __swap_cp_page(struct memphy_struct *mpsrc, int srcfpn,
   return 0;
 }
 
+
+
+
 /*
  *Initialize a empty Memory Management instance
  * @mm:     self mm
@@ -303,6 +312,9 @@ int init_mm(struct mm_struct *mm, struct pcb_t *caller){
   return 0;
 }
 
+
+
+
 struct vm_rg_struct *init_vm_rg(int rg_start, int rg_end){
   struct vm_rg_struct *rgnode = malloc(sizeof(struct vm_rg_struct));
 
@@ -313,16 +325,20 @@ struct vm_rg_struct *init_vm_rg(int rg_start, int rg_end){
   return rgnode;
 }
 
-int enlist_vm_rg_node(struct vm_rg_struct **rglist, struct vm_rg_struct *rgnode)
-{
+
+
+
+int enlist_vm_rg_node(struct vm_rg_struct **rglist, struct vm_rg_struct *rgnode){
   rgnode->rg_next = *rglist;
   *rglist = rgnode;
 
   return 0;
 }
 
-int enlist_pgn_node(struct pgn_t **plist, int pgn)
-{
+
+
+
+int enlist_pgn_node(struct pgn_t **plist, int pgn){
   struct pgn_t *pnode = malloc(sizeof(struct pgn_t));
 
   pnode->pgn = pgn;
@@ -332,8 +348,10 @@ int enlist_pgn_node(struct pgn_t **plist, int pgn)
   return 0;
 }
 
-int print_list_fp(struct framephy_struct *ifp)
-{
+
+
+
+int print_list_fp(struct framephy_struct *ifp){
   struct framephy_struct *fp = ifp;
 
   printf("print_list_fp: ");
