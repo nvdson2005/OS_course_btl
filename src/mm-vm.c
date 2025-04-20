@@ -106,25 +106,26 @@ int validate_overlap_vm_area(struct pcb_t *caller, int vmaid, int vmastart, int 
   return 0;
 }
 
+
+
+
 /*inc_vma_limit - increase vm area limits to reserve space for new variable
  *@caller: caller
  *@vmaid: ID vm area to alloc memory region
  *@inc_sz: increment size
  *
  */
-int inc_vma_limit(struct pcb_t *caller, int vmaid, int inc_sz)
-{
-  struct vm_rg_struct * newrg = malloc(sizeof(struct vm_rg_struct));
+int inc_vma_limit(struct pcb_t *caller, int vmaid, int inc_sz){
+  struct vm_rg_struct * newrg = malloc(sizeof(struct vm_rg_struct)); // not used elsewhere -> leak
   int inc_amt = PAGING_PAGE_ALIGNSZ(inc_sz);
   int incnumpage =  inc_amt / PAGING_PAGESZ;
-  struct vm_rg_struct *area = get_vm_area_node_at_brk(caller, vmaid, inc_sz, inc_amt);
+  struct vm_rg_struct *area = get_vm_area_node_at_brk(caller, vmaid, inc_sz, inc_amt); // this too
   struct vm_area_struct *cur_vma = get_vma_by_num(caller->mm, vmaid);
 
   int old_end = cur_vma->vm_end;
 
   /*Validate overlap of obtained region */
-  if (validate_overlap_vm_area(caller, vmaid, area->rg_start, area->rg_end) < 0)
-    return -1; /*Overlap and failed allocation */
+  if (validate_overlap_vm_area(caller, vmaid, area->rg_start, area->rg_end) < 0) return -1; /*Overlap and failed allocation */
 
   /* TODO: Obtain the new vm area based on vmaid */
   //cur_vma->vm_end... 
@@ -136,9 +137,14 @@ int inc_vma_limit(struct pcb_t *caller, int vmaid, int inc_sz)
   cur_vma->sbrk = area->rg_end; /* Update the break point */
   
   int inc_limit_ret = vm_map_ram(caller, area->rg_start, area->rg_end, old_end, incnumpage, newrg);
-  if (inc_limit_ret < 0) return -1; /* Failed to map the memory to MEMRAM */
+  int return_sig = 0;
+  if (inc_limit_ret < 0) return_sig = -1; /* Failed to map the memory to MEMRAM */
 
-  return 0;
+/////////////////////START//////////////////////
+free(newrg);
+free(area);
+//////////////////////END///////////////////////
+  return return_sig;
 }
 
 // #endif
