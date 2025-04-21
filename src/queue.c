@@ -2,59 +2,62 @@
 #include <stdlib.h>
 #include "queue.h"
 
-int empty(struct queue_t * q) {
-if (q == NULL) return 1;
-return (q->size == 0);
+int empty(struct queue_t *q)
+{
+  if (q == NULL)
+    return 1;
+  return (q->size == 0);
 }
 
+void enqueue(struct queue_t *q, struct pcb_t *proc)
+{
+  /* TODO: put a new process to queue [q] */
+  //null condition
+  if (q == NULL || proc == NULL)
+    return;
 
+  //if queue is full, do nothing 
+  if (q->size == MAX_QUEUE_SIZE)
+  {
+    return;
+  }
 
+  //as priority queue, find the correct position to insert the process based on prio  
+  int i = q->size - 1;
+  //for debugging purpose
+  // printf("Enqueuing process with prio = %d\n", proc->prio); // Debugging
+  while (i >= 0 && (q->proc[i]->prio  >  proc->prio))
+  {
+    q->proc[i + 1] = q->proc[i];
+    i--;
+  }
 
-/* TODO: put a new process to queue [q] */
-void enqueue(struct queue_t * q, struct pcb_t * proc){
-if(q == NULL || proc == NULL) return;
-if(q->size >= MAX_QUEUE_SIZE) return;
-
-q->proc[q->size] = proc;
-++q->size;
+  //insert at the correct position 
+  q->proc[i + 1] = proc;
+  q->size++;
 }
 
+struct pcb_t *dequeue(struct queue_t *q)
+{
+  /* TODO: return a pcb whose prioprity is the highest
+   * in the queue [q] and remember to remove it from q
+   * */
+  // return null if queue is empty or there is no process in the queue
+  if (q == NULL || q->size == 0)
+    return NULL;
 
-
-
-/* TODO: return a pcb whose prioprity is the highest
-* in the queue [q] and remember to remove it from q
-* */
-struct pcb_t * dequeue(struct queue_t * q) {
-if(empty(q)) return NULL;
-
-int queue_size = q->size;
-int idx = 0;
-uint32_t temp = q->proc[0]->priority;
-uint32_t current_prio;
-
-for(int a = 1; a < queue_size; ++a){
-if(q->proc[a] == NULL) continue;
-
-//check prio highest (which value is lowest)
-current_prio = q->proc[a]->priority;
-if(current_prio < temp){
-temp = current_prio;
-idx = a;
+  //get the process with the highest priority
+  struct pcb_t* maxPriorPcb = q->proc[0];
+  //for debugging purpose
+  // printf("Dequeuing process with prio = %d\n", maxPriorPcb->prio); // Debuggingg
+  //remove the process from the queue
+  for (int i = 0; i < q->size - 1; i++)
+  {
+    q->proc[i] = q->proc[i + 1];
+  }
+  //set the last element to null
+  q->proc[q->size - 1] = NULL;
+  //decrease the size of the queue
+  q->size--;
+  return maxPriorPcb;
 }
-}
-
-
-// save
-struct pcb_t* return_pcb_t_pointer = q->proc[idx];
-
-// sort queue (overwrite idx value)
-for(int a = idx + 1; a < queue_size; ++a){
-q->proc[a - 1] = q->proc[a];
-}
-q->proc[queue_size - 1] = NULL;
---(q->size);
-
-return return_pcb_t_pointer;
-}
-

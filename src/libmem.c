@@ -137,37 +137,61 @@ regs.a3 = inc_sz;
  *
  */
 int __free(struct pcb_t *caller, int vmaid, int rgid){
-if(rgid < 0 || rgid > PAGING_MAX_SYMTBL_SZ) return -1;
-pthread_mutex_lock(&mmvm_lock);
+    if(rgid < 0 || rgid > PAGING_MAX_SYMTBL_SZ) return -1;
+    pthread_mutex_lock(&mmvm_lock);
 
-/* TODO Manage the collect freed region to freerg_list */
-struct vm_rg_struct *rgnode = malloc(sizeof(struct vm_rg_struct));
-if (rgnode == NULL){
-pthread_mutex_unlock(&mmvm_lock);
-return -1;
+    struct vm_rg_struct *symrg = &caller->mm->symrgtbl[rgid];
+
+    /* Validate region */
+    if (symrg->rg_start == 0 && symrg->rg_end == 0) {
+        pthread_mutex_unlock(&mmvm_lock);
+        return -1;
+    }
+
+    /* Remove page mappings */
+    for (uint32_t addr = symrg->rg_start; addr < symrg->rg_end; addr += PAGING_PAGESZ) {
+        uint32_t vpn = PAGING_PGN(addr);
+        uint32_t pte = caller->mm->pgd[vpn];
+
+        if (pte & PAGING_PTE_PRESENT_MASK) {
+            int pfn = PAGING_PTE_FPN(pte);
+            struct framephy_struct *frame = malloc(sizeof(struct framephy_struct));
+            frame->fpn = pfn;
+            frame->fp_next = caller->mram->free_fp_list;
+            caller->mram->free_fp_list = frame;
+        }
+
+        caller->mm->pgd[vpn] &= ~PAGING_PTE_PRESENT_MASK;
+    }
+
+    /* Reset symbol table entry */
+    struct vm_rg_struct *rgnode = malloc(sizeof(struct vm_rg_struct));
+    if (rgnode == NULL){
+        pthread_mutex_unlock(&mmvm_lock);
+        return -1;
+    }
+
+    rgnode->rg_start = symrg->rg_start;
+    rgnode->rg_end = symrg->rg_end;
+    rgnode->rg_next = NULL;
+
+    symrg->rg_start = 0;
+    symrg->rg_end = 0;
+
+    if (enlist_vm_freerg_list(caller->mm, rgnode) != 0) {
+        free(rgnode);
+        pthread_mutex_unlock(&mmvm_lock);
+        return -1;
+    }
+
+    printf("===== PHYSICAL MEMORY AFTER DEALLOCATION =====\n");
+    printf("PID=%d - Region=%d\n", caller->pid, rgid);
+    print_pgtbl(caller, 0, -1);
+
+    pthread_mutex_unlock(&mmvm_lock);
+    return 0;
 }
-/* Copy information from symbol region table */
-rgnode->rg_start = caller->mm->symrgtbl[rgid].rg_start;
-rgnode->rg_end = caller->mm->symrgtbl[rgid].rg_end;
-rgnode->rg_next = NULL;
 
-/* Reset symbol table entry */
-caller->mm->symrgtbl[rgid].rg_start = 0;
-caller->mm->symrgtbl[rgid].rg_end = 0;
-
-if (enlist_vm_freerg_list(caller->mm, rgnode) != 0) {
-free(rgnode); // prevent memory leak
-pthread_mutex_unlock(&mmvm_lock);
-return -1;
-}
-
-printf("===== PHYSICAL MEMORY AFTER DEALLOCATION =====\n");
-printf("PID=%d - Region=%d\n", caller->pid, rgid);
-print_pgtbl(caller, 0, -1);
-
-pthread_mutex_unlock(&mmvm_lock);
-return 0;
-}
 
 
 
@@ -214,43 +238,44 @@ int libfree(struct pcb_t *proc, uint32_t reg_index){
 int pg_getpage(struct mm_struct *mm, int pgn, int *fpn, struct pcb_t *caller){
 uint32_t pte = mm->pgd[pgn];
 
-if (!PAGING_PAGE_PRESENT(pte)) {
+if (!PAGING_PAGE_PRESENT(pte)){
+
 if (!PAGING_PAGE_SWAPPED(pte)) {
 printf("=========invalid page access=========\n");
 return -1; // invalid page access: not in mem, not in swap
 }
 
-    int tgtfpn = PAGING_PTE_SWP(pte);
+int tgtfpn = PAGING_PTE_SWP(pte);
 
-    int vicpgn;
-    find_victim_page(mm, &vicpgn);
+int vicpgn;
+find_victim_page(mm, &vicpgn);
 
-    uint32_t vicpte = mm->pgd[vicpgn];
-    int vicfpn = PAGING_FPN(vicpte);
+uint32_t vicpte = mm->pgd[vicpgn];
+int vicfpn = PAGING_FPN(vicpte);
 
-    int swpfpn;
-    MEMPHY_get_freefp(caller->active_mswp, &swpfpn);
+int swpfpn;
+MEMPHY_get_freefp(caller->active_mswp, &swpfpn);
 
-    // Victim -> Swap
-    struct sc_regs regs;
-    regs.a1 = SYSMEM_SWP_OP;
-    regs.a2 = vicfpn;
-    regs.a3 = swpfpn;
-    syscall(caller, 17, &regs);
+// Victim -> Swap
+struct sc_regs regs;
+regs.a1 = SYSMEM_SWP_OP;
+regs.a2 = vicfpn;
+regs.a3 = swpfpn;
+syscall(caller, 17, &regs);
 
-    // Target -> Mem
-    regs.a2 = vicfpn;
-    regs.a3 = tgtfpn;
-    syscall(caller, 17, &regs);
+// Target -> Mem
+regs.a2 = vicfpn;
+regs.a3 = tgtfpn;
+syscall(caller, 17, &regs);
 
-    // Update victim to swapped
-    pte_set_swap(&mm->pgd[vicpgn], 0, swpfpn);
+// Update victim to swapped
+pte_set_swap(&mm->pgd[vicpgn], 0, swpfpn);
 
-    // Update target to memory
-    pte_set_fpn(&mm->pgd[pgn], vicfpn);
-    PAGING_PTE_SET_PRESENT(mm->pgd[pgn]);
+// Update target to memory
+pte_set_fpn(&mm->pgd[pgn], vicfpn);
+PAGING_PTE_SET_PRESENT(mm->pgd[pgn]);
 
-    enlist_pgn_node(&mm->fifo_pgn, pgn);
+enlist_pgn_node(&mm->fifo_pgn, pgn);
 }
 
 *fpn = PAGING_FPN(mm->pgd[pgn]);
@@ -363,6 +388,7 @@ int libread(
     uint32_t source,    // Index of source register
     uint32_t offset,    // Source address = [source] + [offset]
     uint32_t* destination){
+pthread_mutex_lock(&mmvm_lock);
 BYTE data;
 int val = __read(proc, 0, source, offset, &data);
 
@@ -374,7 +400,7 @@ print_pgtbl(proc, 0, -1); //print max TBL
 #endif
 MEMPHY_dump(proc->mram);
 #endif
-
+pthread_mutex_unlock(&mmvm_lock);
 return val;
 }
 
@@ -415,6 +441,7 @@ int libwrite(
     BYTE data,            // Data to be wrttien into memory
     uint32_t destination, // Index of destination register
     uint32_t offset){
+pthread_mutex_lock(&mmvm_lock);
 int return_flag = __write(proc, 0, destination, offset, data);
 
 #ifdef IODUMP
@@ -424,7 +451,7 @@ print_pgtbl(proc, 0, -1); //print max TBL
 #endif
 MEMPHY_dump(proc->mram);
 #endif
-
+pthread_mutex_unlock(&mmvm_lock);
 return return_flag;
 }
 

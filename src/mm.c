@@ -77,17 +77,6 @@ return 0;
 
 
 
-  /* TODO: update the rg_end and rg_start of ret_rg 
-  //ret_rg->rg_end =  ....
-  //ret_rg->rg_start = ...
-  */
-
-
-  /* TODO map range of frame to address space
-   *      [addr to addr + pgnum*PAGING_PAGESZ
-   *      in page table caller->mm->pgd[]
-   */
-
 /*
  * vmap_page_range - map a range of page at aligned address
  */
@@ -101,9 +90,11 @@ int vmap_page_range(struct pcb_t *caller,           // process call
 int pgit = 0;
 int pgn = PAGING_PGN(addr);
 
+// TODO: update the rg_end and rg_start of ret_rg 
 ret_rg->rg_start = addr;
 ret_rg->rg_end = addr + pgnum * PAGING_PAGESZ;
 
+// TODO map range of frame to address space [addr to addr + pgnum*PAGING_PAGESZ in page table caller->mm->pgd[]
 struct framephy_struct *fpit = frames;
 for (pgit = 0; pgit < pgnum; pgit++){
 if (fpit == NULL) break;
@@ -125,23 +116,6 @@ return 0;
 
 
 
-// TODO: allocate the page 
-//caller-> ...
-//frm_lst-> ...
-
-/*
-for (pgit = 0; pgit < req_pgnum; pgit++){
-//TODO: allocate the page 
-
-if (MEMPHY_get_freefp(caller->mram, &fpn) == 0){
-newfp_str->fpn = fpn;
-}
-else{
-// TODO: ERROR CODE of obtaining somes but not enough frames
-}
-}
-*/
-
 /*
  * alloc_pages_range - allocate req_pgnum of frame in ram
  * @caller    : caller
@@ -155,8 +129,8 @@ struct framephy_struct* newfp_str = NULL;
 struct framephy_struct* tail = NULL;
 *frm_lst = NULL;
 
-
 for(pgit = 0; pgit < req_pgnum; pgit++){
+//TODO: allocate the page
 if(MEMPHY_get_freefp(caller->mram, &fpn) == 0){
 // Create new frame 
 newfp_str = malloc(sizeof(struct framephy_struct));
@@ -173,29 +147,33 @@ tail->fp_next = newfp_str;
 tail = newfp_str;
 }
 
+
 }
-// Not enough frames available
+// TODO: ERROR CODE of obtaining somes but not enough frames (not enough frame available)
 else{
 // Clean up already allocated frames
 struct framephy_struct *temp = *frm_lst;
-while(temp){
+for(;temp != NULL;){
 struct framephy_struct *next = temp->fp_next;
 MEMPHY_put_freefp(caller->mram, temp->fpn);
 free(temp);
 temp = next;
 }
 return -3000; // OOM
+
 }
 
 }
 
 // Reverse the frame list
-struct framephy_struct *prev = NULL, *curr = *frm_lst, *next = NULL;
-while (curr) {
-    next = curr->fp_next;
-    curr->fp_next = prev;
-    prev = curr;
-    curr = next;
+struct framephy_struct *prev = NULL;
+struct framephy_struct *curr = *frm_lst;
+struct framephy_struct *next = NULL;
+for(;curr != NULL;){
+next = curr->fp_next;
+curr->fp_next = prev;
+prev = curr;
+curr = next;
 }
 *frm_lst = prev;
 

@@ -1,5 +1,5 @@
-#include "../include/queue.h" //fix the include from original file: "queue.h" and "sched.h"
-#include "../include/sched.h"
+#include "queue.h"
+#include "sched.h"
 #include <pthread.h>
 
 #include <stdlib.h>
